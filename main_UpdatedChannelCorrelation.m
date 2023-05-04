@@ -1,0 +1,216 @@
+%========================================================a
+%  Author: Wei Li;
+%  Date:   06/09/ 2022,  SUTD;
+%  Version: V1.0 
+%  Note: This is polarized HMIMOS channel modeling in near
+%        field using Green's function, the precoding design
+%        and power allocation. 
+
+% The relevant paper is L. Wei et al., "Tri-Polarized 
+% Holographic MIMO Surfaces for Near-Field Communications: 
+% Channel Modeling and Precoding Design," in IEEE Transactions 
+% on Wireless Communications, doi: 10.1109/TWC.2023.3266298.
+
+% Please cite this paper properly if you use any part of this code
+%%========================================================
+clc
+clear   
+
+% fid=fopen('result.txt','a+');
+%%========================================================
+%  Set the parameters
+% Environment setting
+v_light=3*10^8;
+waveFreq=1e3;  
+% par.waveLambda=v_light/waveFreq;
+par.waveLambda=1;
+par.wavenumber=2*pi/par.waveLambda;
+% system parameter setting
+[transmit,receive,users,nearFieldRegion]=SystemConfig(par);
+
+% % The distance between each user and the transmitter
+% temp_UETX_dis.X=zeros(users.num*receive.totalNum,transmit.totalNum);
+% temp_UETX_dis.Y=zeros(users.num*receive.totalNum,transmit.totalNum);
+% temp_UETX_dis.Z=repmat(kron(users.start.z.',ones(receive.totalNum,1)),...
+%     1,transmit.totalNum);
+% for index_user=1:users.num
+%     temp_users_coordX=users.start.h(index_user):receive.spacing.h...
+%         :users.start.h(index_user)+(receive.num.h-1)*receive.spacing.h;
+%     users.coordinateX(index_user,:)=kron(ones(1,receive.num.v),...
+%         temp_users_coordX);
+%     temp_users_coordY=users.start.v(index_user):receive.spacing.v...
+%         :users.start.v(index_user)+(receive.num.v-1)*receive.spacing.v; 
+%     users.coordinateY(index_user,:)=kron(temp_users_coordY,...
+%         ones(1,receive.num.h));
+%     % The distance between each user and the transmitter
+%     temp_UETX_dis.X((index_user-1)*receive.totalNum+1:index_user...
+%         *receive.totalNum,:)=bsxfun(@minus,transmit.coordinateX,...
+%         users.coordinateX(index_user,:).');
+%     temp_UETX_dis.Y((index_user-1)*receive.totalNum+1:index_user...
+%         *receive.totalNum,:)=bsxfun(@minus,transmit.coordinateY,...
+%         users.coordinateY(index_user,:).');
+%     temp_UETX=sqrt(temp_UETX_dis.X((index_user-1)*receive.totalNum...
+%         +1:index_user*receive.totalNum,:).^2+temp_UETX_dis.Y((index_user-1)...
+%         *receive.totalNum+1:index_user*receive.totalNum,:).^2 ...
+%         +temp_UETX_dis.Z((index_user-1)*receive.totalNum...
+%         +1:index_user*receive.totalNum,:).^2);
+%     par.UETX.distance((index_user-1)*receive.totalNum+1:index_user...
+%         *receive.totalNum,:)=temp_UETX;
+% end
+% 
+% [ChanPol]=NF_ChannelGen(transmit,receive,par,temp_UETX_dis);
+% % Full polarized channel
+% ChannelFullPolar=[ChanPol.XX,ChanPol.XY,ChanPol.XZ;...
+%     ChanPol.XY,ChanPol.YY,ChanPol.YZ;...
+%     ChanPol.XZ,ChanPol.YZ,ChanPol.ZZ];
+ 
+
+%% Theoretical analysis
+%% Averaged channel correlation:Theoretical v.s. Simulated 
+% CorDisTransmitX=repmat(transmit.coordinateX,1,transmit.totalNum)...
+%     -kron(transmit.coordinateX,ones(1,transmit.totalNum)); 
+% CorDisTransmitY=repmat(transmit.coordinateY,1,transmit.totalNum)...
+%     -kron(transmit.coordinateY,ones(1,transmit.totalNum)); 
+% CorDisTransmit=transmit.coordinateX.^2+transmit.coordinateY.^2; % Squared dis between two ant.
+% CorDisTransmit=sqrt(CorDisTransmit);
+% CorDisTransmit=(sort(sqrt(CorDisTransmit),'ascend'));   
+% 
+% 
+%% Theoretical value: The average Normalized correlation  
+figure
+% CorDisTransmit=unique(CorDisTransmit);
+% delta= (CorDisTransmit)/users.start.z;
+% TheoCorFactor=par.wavenumber/(6*pi)+par.wavenumber^3*CorDisTransmit.^3/(288*pi); 
+% newX=(CorDisTransmit)/par.waveLambda; 
+% % Plot correlation curve
+% plot(1:transmit.totalNum, TheoCorFactor,'ks-','LineWidth',1)
+
+
+% CorDisTransmitX=transmit.coordinateX;
+% CorDisTransmitY=transmit.coordinateY;
+% CorDisTransmit=CorDisTransmitX.^2+CorDisTransmitY.^2; % Squared dis between two ant.
+% CorDisTransmit=sqrt(CorDisTransmit);
+% prodTerm=par.wavenumber*CorDisTransmit;
+% ImGreenX=sin(prodTerm)./CorDisTransmit...
+%     +cos(prodTerm)./(par.wavenumber*CorDisTransmit.^2)...
+%     -sin(prodTerm)./(par.wavenumber^2*CorDisTransmit.^3)...
+%     +3*CorDisTransmitX.^2.*sin(prodTerm)./(par.wavenumber^2*CorDisTransmit.^4)...
+%     -3*CorDisTransmitX.^2.*cos(prodTerm)./(par.wavenumber*CorDisTransmit.^3)...
+%     -CorDisTransmitX.^2.*sin(prodTerm)./(CorDisTransmit.^2);
+% ImGreenY=sin(prodTerm)./CorDisTransmit...
+%     +cos(prodTerm)./(par.wavenumber*CorDisTransmit.^2)...
+%     -sin(prodTerm)./(par.wavenumber^2*CorDisTransmit.^3)...
+%     +3*CorDisTransmitY.^2.*sin(prodTerm)./(par.wavenumber^2*CorDisTransmit.^4)...
+%     -3*CorDisTransmitY.^2.*cos(prodTerm)./(par.wavenumber*CorDisTransmit.^3)...
+%     -CorDisTransmitY.^2.*sin(prodTerm)./(CorDisTransmit.^2);
+% ImGreenZ=sin(par.wavenumber*CorDisTransmit)./CorDisTransmit...
+%     +cos(par.wavenumber*CorDisTransmit)./(par.wavenumber*CorDisTransmit.^2)...
+%     -sin(par.wavenumber*CorDisTransmit)./(par.wavenumber^2*CorDisTransmit.^3);
+%  finalreul=(ImGreenX+ImGreenY+ImGreenZ)/3;
+CorDisTransmitX=transmit.coordinateX;
+CorDisTransmitY=transmit.coordinateY;
+CorDisTransmit=CorDisTransmitX.^2+CorDisTransmitY.^2; % Squared dis between two ant.
+CorDisTransmit=sqrt(CorDisTransmit);
+prodTerm=par.wavenumber*CorDisTransmit;
+ImGreen_var=3*CorDisTransmit.^2.*sin(prodTerm)./(par.wavenumber^2*CorDisTransmit.^5)...
+    -3*CorDisTransmit.^2.*cos(prodTerm)./(par.wavenumber*CorDisTransmit.^4)...
+    -CorDisTransmit.^2.*sin(prodTerm)./(CorDisTransmit.^3);
+simuResul=sin(prodTerm)./CorDisTransmit...
+    +cos(prodTerm)./(par.wavenumber*CorDisTransmit.^2)...
+    -sin(prodTerm)./(par.wavenumber^2*CorDisTransmit.^3)+ImGreen_var/3;
+simuResul=simuResul/(4*pi);
+ simuResul=simuResul/simuResul(1,2);
+ plot(1:transmit.totalNum, simuResul,'k-','LineWidth',1) 
+ hold on
+%  theoResul= par.wavenumber/(6*pi)+par.wavenumber^3*CorDisTransmit.^2/(288*pi);
+%  plot(CorDisTransmit, theoResul,'r-','LineWidth',1) 
+
+grid on 
+xlabel('Number of transmit patch antennas','Interpreter','latex');
+ylabel('spatial correlation','Interpreter','latex'); 
+legend('Simulated ($\Delta^s_x=\Delta^s_y=0.1\lambda$)')
+
+%% Simulated: Channel correlation of each co-/cross-polarized channels
+% corChanXX=ChanPol.XX(:)*ChanPol.XX(:)'; 
+% corChanYY=ChanPol.YY(:)*ChanPol.YY(:)';
+% corChanZZ=ChanPol.ZZ(:)*ChanPol.ZZ(:)';
+% corChanXZ=ChanPol.XZ(:)*ChanPol.XZ(:)'; 
+% corChanYZ=ChanPol.YZ(:)*ChanPol.YZ(:)';
+% corChanXY=ChanPol.XY(:)*ChanPol.XY(:)';
+% 
+% normalizedXX=abs(corChanXX(1,:))./abs(corChanXX(1,1));
+% normalizedYY=abs(corChanYY(1,:))./abs(corChanYY(1,1));
+% normalizedZZ=abs(corChanZZ(1,:))./abs(corChanZZ(1,1));
+% normalizedXZ=abs(corChanXZ(1,:))./abs(corChanXZ(1,1));
+% normalizedYZ=abs(corChanYZ(1,:))./abs(corChanYZ(1,1));
+% normalizedXY=abs(corChanXY(1,:))./abs(corChanXY(1,1));
+% 
+% normalizedXX=sort(normalizedXX,'descend');
+% normalizedYY=sort(normalizedYY,'descend');
+% normalizedZZ=sort(normalizedZZ,'descend');
+% normalizedXZ=sort(normalizedXZ,'descend');
+% normalizedYZ=sort(normalizedYZ,'descend');
+% normalizedXY=sort(normalizedXY,'descend');
+% 
+% newX=(CorDisTransmit)/par.waveLambda; 
+% 
+% figure
+% hold on
+% plot(newX, normalizedXX,'ro','LineWidth',1) 
+% plot(newX, normalizedYY,'bx','LineWidth',1) 
+% plot(newX, normalizedZZ,'k-','LineWidth',1) 
+% % plot(newX, normalizedXZ,'r--','LineWidth',1) 
+% % plot(newX, normalizedYZ,'b--','LineWidth',1) 
+% % plot(newX, normalizedXY,'m--','LineWidth',1) 
+% xlabel('Number of transmit patch antennas','Interpreter','latex');
+% ylabel('Normalized spatial correlation','Interpreter','latex'); 
+
+
+% All channel correlation 
+% % The normalized correlation of Each polarized channel 
+
+% figure
+% delta= (CorDisTransmit)/users.start.z;
+% rest_Cor_X=(1-delta.^2/2)./(1+delta.^2/4).^(5/2);
+% rest_Cor_Y=1./(1+delta.^2/4).^(3/2);
+% rest_Cor_Z=(2-delta.^2/4)./(1+delta.^2/4).^(5/2);
+% newX=(CorDisTransmit)/par.waveLambda;  
+% %     Plot correlation curve
+% hold on;grid on 
+% plot(newX, rest_Cor_X,'r-','LineWidth',1)   
+% plot(newX, rest_Cor_Y,'b-','LineWidth',1)  
+% plot(newX, rest_Cor_Z,'k-','LineWidth',1)
+% % h = zeros(3, 1); 
+% % h(1) = plot(NaN,NaN,'r-','linewidth',1); 
+% % h(2) = plot(NaN,NaN,'b-','linewidth',1); 
+% % h(3) = plot(NaN,NaN,'s-','linewidth',1); 
+%  
+% legend('Polarization: xx','Polarization: yy',...
+%     'Polarization: zz','Interpreter','Latex');
+ 
+ 
+% %% Simulated: Eigenvalues of all polarized channels
+% corChanXX=ChanPol.XX'*ChanPol.XX; 
+% corChanYY=ChanPol.YY'*ChanPol.YY;
+% corChanZZ=ChanPol.ZZ'*ChanPol.ZZ;
+% corChanXY=ChanPol.XY'*ChanPol.XY;
+% corChanXZ=ChanPol.XZ'*ChanPol.XZ;
+% corChanYZ=ChanPol.YZ'*ChanPol.YZ;
+% eigenvalues_XX= sort(eig(corChanXX),'descend');
+% eigenvalues_YY= sort(eig(corChanYY),'descend');
+% eigenvalues_ZZ= sort(eig(corChanZZ),'descend');
+% eigenvalues_XY= sort(eig(corChanXY),'descend');
+% eigenvalues_XZ= sort(eig(corChanXZ),'descend');
+% eigenvalues_YZ= sort(eig(corChanYZ),'descend');
+% figure;
+% hold on;  
+% plot(1:transmit.totalNum,eigenvalues_XX,'ro','LineWidth',0.5);
+% plot(1:transmit.totalNum,eigenvalues_YY,'bx','LineWidth',0.5);
+% plot(1:transmit.totalNum,eigenvalues_ZZ,'k-','LineWidth',1);
+% plot(1:transmit.totalNum,eigenvalues_XZ,'r--','LineWidth',1);
+% plot(1:transmit.totalNum,eigenvalues_YZ,'b:','LineWidth',1);
+% plot(1:transmit.totalNum,eigenvalues_XY,'m--','LineWidth',1);
+% xlabel('Eigenvalue number','Interpreter','latex');
+% ylabel('Eigenvalue','Interpreter','latex');
+% grid on
+% legend('XX','YY','ZZ','XZ','YZ','XY')
